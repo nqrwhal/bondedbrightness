@@ -30,6 +30,14 @@ Verify the staged app launches:
 
 The Codex Run action is wired to the same script.
 
+## Release
+
+To create a disk image (`.dmg`) for distribution:
+
+```bash
+./script/create_dmg.sh
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
