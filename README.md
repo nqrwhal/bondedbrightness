@@ -2,7 +2,10 @@
 
 Native macOS menu bar app that links two Studio Display brightness levels.
 
-![Demo Video](bondedbrightness.mp4)
+
+https://github.com/user-attachments/assets/0115908b-989f-4d01-abf3-8982f34fff86
+
+
 
 The main display is the source of truth. On each poll, the app reads the main
 display brightness and writes the secondary display to the same level, adjusted
