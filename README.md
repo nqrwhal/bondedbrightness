@@ -1,27 +1,40 @@
 # BondedBrightness
 
-Native macOS menu bar app that links two Studio Display brightness levels.
+Native macOS menu bar app for syncing brightness across multiple Apple displays.
 
 
 https://github.com/user-attachments/assets/0115908b-989f-4d01-abf3-8982f34fff86
 
 
 
-The app can use the main display, another display, or the display that
-currently hosts the frontmost app's active window as the primary display. On
-each poll, it reads the primary display brightness and writes every linked
-display to the same level, adjusted by the configured per-display offsets.
+BondedBrightness keeps a primary display and any number of linked displays in
+sync. It can also choose the primary display from the display that currently
+hosts the frontmost app's active window.
 
-## Behavior
+The app is model-agnostic and is intended for Apple displays that expose
+software brightness control. It has been verified on Studio Display hardware,
+and Apple documents brightness control for Pro Display XDR as well.
+
+## Features
 
 - Runs as a menu bar app.
 - Supports manual primary selection and a focused-app heuristic.
-- Syncs linked Studio Displays automatically.
+- Syncs linked displays automatically.
 - Supports pause/resume from the menu bar.
 - Supports primary and linked offsets in 5% steps.
 - Lets you identify displays from the menu bar.
 - Persists pause, offset, and launch-at-login preferences with `UserDefaults`.
 - Registers itself as a login item by default.
+
+## Usage
+
+Use the menu bar icon to:
+
+- Choose the primary display source.
+- Pause or resume syncing.
+- Adjust primary and linked offsets.
+- Identify connected displays.
+- Toggle launch at login.
 
 ## Run
 
