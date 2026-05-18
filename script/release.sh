@@ -11,8 +11,7 @@ fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-DMG_NAME="BondedBrightness-${TAG}.dmg"
-"$ROOT_DIR/script/create_dmg.sh"
+DMG_NAME="BondedBrightness-${TAG}.dmg" "$ROOT_DIR/script/create_dmg.sh"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "gh CLI is required to upload the release artifact." >&2
