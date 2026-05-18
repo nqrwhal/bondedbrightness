@@ -8,16 +8,19 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let syncController: BrightnessSyncController
     private let settingsStore: SettingsStore
     private let loginItemController: LoginItemController
+    private let displayIdentifier: DisplayIdentifier
     private var liveRefreshTimer: Timer?
 
     init(
         syncController: BrightnessSyncController,
         settingsStore: SettingsStore,
-        loginItemController: LoginItemController
+        loginItemController: LoginItemController,
+        displayClient: DisplayBrightnessClient
     ) {
         self.syncController = syncController
         self.settingsStore = settingsStore
         self.loginItemController = loginItemController
+        self.displayIdentifier = DisplayIdentifier(displayClient: displayClient)
         super.init()
 
         statusItem.button?.image = NSImage(
@@ -48,16 +51,20 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             menu.addItem(disabledItem("Primary: \(primary)"))
         }
 
-        if let secondary = status.secondaryName {
-            menu.addItem(disabledItem("Secondary: \(secondary)"))
+        if !status.linkedNames.isEmpty {
+            menu.addItem(disabledItem("Linked: \(status.linkedNames.joined(separator: ", "))"))
         }
 
         if let primaryBrightness = status.primaryBrightness {
             menu.addItem(disabledItem("Primary brightness: \(percent(primaryBrightness))"))
         }
 
-        if let targetBrightness = status.targetBrightness {
-            menu.addItem(disabledItem("Secondary target: \(percent(targetBrightness))"))
+        if let targetBrightness = status.linkedTargetBrightness {
+            menu.addItem(disabledItem("Linked target: \(percent(targetBrightness))"))
+        }
+
+        if let mode = status.primaryModeTitle {
+            menu.addItem(disabledItem("Primary mode: \(mode)"))
         }
 
         if let error = status.lastError {
@@ -68,6 +75,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             menu.addItem(disabledItem("Login item: \(loginError)"))
         }
 
+        menu.addItem(.separator())
+
+        addPrimaryModeSection()
         menu.addItem(.separator())
 
         let pauseItem = NSMenuItem(
@@ -84,6 +94,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
         addOffsetItems(settings: settings)
+        menu.addItem(.separator())
+
+        let identifyItem = NSMenuItem(title: "Identify Displays", action: #selector(identifyDisplays), keyEquivalent: "")
+        identifyItem.target = self
+        menu.addItem(identifyItem)
         menu.addItem(.separator())
 
         let autoLaunchItem = NSMenuItem(
@@ -142,10 +157,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         increasePrimary.target = self
         menu.addItem(increasePrimary)
 
-        menu.addItem(disabledItem("Secondary offset: \(signedPercent(settings.secondaryOffset))"))
+        menu.addItem(disabledItem("Linked offset: \(signedPercent(settings.secondaryOffset))"))
 
         let decreaseSecondary = NSMenuItem(
-            title: "Secondary Offset -5%",
+            title: "Linked Offset -5%",
             action: #selector(decreaseSecondaryOffset),
             keyEquivalent: ""
         )
@@ -153,7 +168,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(decreaseSecondary)
 
         let increaseSecondary = NSMenuItem(
-            title: "Secondary Offset +5%",
+            title: "Linked Offset +5%",
             action: #selector(increaseSecondaryOffset),
             keyEquivalent: ""
         )
@@ -163,6 +178,23 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         let reset = NSMenuItem(title: "Reset Offsets", action: #selector(resetOffsets), keyEquivalent: "")
         reset.target = self
         menu.addItem(reset)
+    }
+
+    private func addPrimaryModeSection() {
+        let title = disabledItem("Primary Selection")
+        menu.addItem(title)
+
+        for mode in MasterSelectionMode.allCases {
+            let item = NSMenuItem(
+                title: mode.title,
+                action: #selector(selectMasterMode(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = mode.rawValue
+            item.state = settingsStore.settings.masterSelectionMode == mode ? .on : .off
+            menu.addItem(item)
+        }
     }
 
     private func disabledItem(_ title: String) -> NSMenuItem {
@@ -181,6 +213,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func refreshLiveMenu() {
         rebuildMenu()
+        menu.update()
     }
 
     @objc private func decreasePrimaryOffset() {
@@ -201,6 +234,23 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func resetOffsets() {
         syncController.resetOffsets()
+    }
+
+    @objc private func selectMasterMode(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let mode = MasterSelectionMode(rawValue: rawValue)
+        else {
+            return
+        }
+
+        settingsStore.setMasterSelectionMode(mode)
+        syncController.syncNow()
+        rebuildMenu()
+    }
+
+    @objc private func identifyDisplays() {
+        displayIdentifier.identify()
     }
 
     @objc private func toggleLaunchAtLogin() {

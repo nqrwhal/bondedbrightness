@@ -5,6 +5,24 @@ struct AppSettings {
     var primaryOffset: Double
     var secondaryOffset: Double
     var autoLaunchAtLogin: Bool
+    var masterSelectionMode: MasterSelectionMode
+}
+
+enum MasterSelectionMode: String, CaseIterable {
+    case focusedApp
+    case mainDisplay
+    case secondaryDisplay
+
+    var title: String {
+        switch self {
+        case .focusedApp:
+            return "Focused App"
+        case .mainDisplay:
+            return "Main Display"
+        case .secondaryDisplay:
+            return "Other Display"
+        }
+    }
 }
 
 final class SettingsStore {
@@ -13,6 +31,7 @@ final class SettingsStore {
         static let primaryOffset = "primaryOffset"
         static let secondaryOffset = "secondaryOffset"
         static let autoLaunchAtLogin = "autoLaunchAtLogin"
+        static let masterSelectionMode = "masterSelectionMode"
     }
 
     private let defaults: UserDefaults
@@ -23,6 +42,10 @@ final class SettingsStore {
         if defaults.object(forKey: Key.autoLaunchAtLogin) == nil {
             defaults.set(true, forKey: Key.autoLaunchAtLogin)
         }
+
+        if defaults.string(forKey: Key.masterSelectionMode) == nil {
+            defaults.set(MasterSelectionMode.mainDisplay.rawValue, forKey: Key.masterSelectionMode)
+        }
     }
 
     var settings: AppSettings {
@@ -30,7 +53,10 @@ final class SettingsStore {
             isPaused: defaults.bool(forKey: Key.isPaused),
             primaryOffset: defaults.double(forKey: Key.primaryOffset),
             secondaryOffset: defaults.double(forKey: Key.secondaryOffset),
-            autoLaunchAtLogin: defaults.bool(forKey: Key.autoLaunchAtLogin)
+            autoLaunchAtLogin: defaults.bool(forKey: Key.autoLaunchAtLogin),
+            masterSelectionMode: MasterSelectionMode(
+                rawValue: defaults.string(forKey: Key.masterSelectionMode) ?? MasterSelectionMode.mainDisplay.rawValue
+            ) ?? .mainDisplay
         )
     }
 
@@ -48,6 +74,10 @@ final class SettingsStore {
 
     func setAutoLaunchAtLogin(_ enabled: Bool) {
         defaults.set(enabled, forKey: Key.autoLaunchAtLogin)
+    }
+
+    func setMasterSelectionMode(_ mode: MasterSelectionMode) {
+        defaults.set(mode.rawValue, forKey: Key.masterSelectionMode)
     }
 
     private func clampedOffset(_ value: Double) -> Double {

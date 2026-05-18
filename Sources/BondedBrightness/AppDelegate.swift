@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController = StatusMenuController(
             syncController: syncController,
             settingsStore: settingsStore,
-            loginItemController: loginItemController
+            loginItemController: loginItemController,
+            displayClient: displayClient
         )
         syncController.start()
     }

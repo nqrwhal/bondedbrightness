@@ -32,7 +32,12 @@ final class DisplayServicesBrightnessClient: DisplayBrightnessClient {
             ManagedDisplay(
                 id: displayID,
                 name: screenName(for: displayID),
-                isMain: displayID == CGMainDisplayID()
+                isMain: displayID == CGMainDisplayID(),
+                identity: DisplayIdentity(
+                    vendorID: CGDisplayVendorNumber(displayID),
+                    productID: CGDisplayModelNumber(displayID),
+                    serialNumber: CGDisplaySerialNumber(displayID)
+                )
             )
         }
     }

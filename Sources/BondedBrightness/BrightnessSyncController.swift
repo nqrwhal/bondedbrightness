@@ -4,10 +4,10 @@ import Foundation
 struct SyncStatus {
     var message: String = "Starting"
     var primaryName: String?
-    var secondaryName: String?
+    var linkedNames: [String] = []
     var primaryBrightness: Double?
-    var secondaryBrightness: Double?
-    var targetBrightness: Double?
+    var linkedTargetBrightness: Double?
+    var primaryModeTitle: String?
     var lastError: String?
 }
 
@@ -15,9 +15,9 @@ struct SyncStatus {
 final class BrightnessSyncController: NSObject {
     private let displayClient: DisplayBrightnessClient
     private let settingsStore: SettingsStore
+    private let focusResolver = DisplayFocusResolver()
     private var timer: Timer?
     private var notifier: DisplayServicesBrightnessNotifier?
-    private var lastPrimaryBrightness: Double?
 
     private(set) var status = SyncStatus()
     var onStatusChange: (() -> Void)?
@@ -102,71 +102,86 @@ final class BrightnessSyncController: NSObject {
         let settings = settingsStore.settings
         let displays = try displayClient.onlineDisplays()
 
-        guard let primary = displays.first(where: \.isMain) else {
+        guard let master = resolveMasterDisplay(from: displays, settings: settings) else {
             updateStatus(message: "No main display", settings: settings)
             return
         }
 
-        guard let secondary = selectSecondaryDisplay(from: displays, primary: primary) else {
+        let linkedDisplays = selectLinkedDisplays(from: displays, primary: master)
+        guard !linkedDisplays.isEmpty else {
             updateStatus(
-                message: "Connect a second display",
-                primary: primary,
+                message: "Connect another display",
+                master: master,
                 settings: settings
             )
             return
         }
 
-        let primaryBrightness = try displayClient.brightness(for: primary)
-        let secondaryBrightness = try displayClient.brightness(for: secondary)
+        let masterBrightness = try displayClient.brightness(for: master)
         let target = BrightnessMath.secondaryBrightness(
-            primaryBrightness: primaryBrightness,
+            primaryBrightness: masterBrightness,
             primaryOffset: settings.primaryOffset,
             secondaryOffset: settings.secondaryOffset
         )
 
         if !settings.isPaused {
-            let secondaryNeedsSync = BrightnessMath.isMeaningfullyDifferent(secondaryBrightness, target)
+            for linkedDisplay in linkedDisplays {
+                let linkedBrightness = try displayClient.brightness(for: linkedDisplay)
+                let linkedNeedsSync = BrightnessMath.isMeaningfullyDifferent(linkedBrightness, target)
 
-            if secondaryNeedsSync {
-                try displayClient.setBrightness(target, for: secondary)
+                if linkedNeedsSync {
+                    try displayClient.setBrightness(target, for: linkedDisplay)
+                }
             }
         }
 
         status = SyncStatus(
             message: settings.isPaused ? "Paused" : "Synced",
-            primaryName: primary.name,
-            secondaryName: secondary.name,
-            primaryBrightness: primaryBrightness,
-            secondaryBrightness: settings.isPaused ? secondaryBrightness : target,
-            targetBrightness: target,
+            primaryName: master.name,
+            linkedNames: linkedDisplays.map(\.name),
+            primaryBrightness: masterBrightness,
+            linkedTargetBrightness: target,
+            primaryModeTitle: settings.masterSelectionMode.title,
             lastError: nil
         )
         notifyStatusChanged()
     }
 
-    private func selectSecondaryDisplay(
+    private func resolveMasterDisplay(
+        from displays: [ManagedDisplay],
+        settings: AppSettings
+    ) -> ManagedDisplay? {
+        switch settings.masterSelectionMode {
+        case .mainDisplay:
+            return displays.first(where: \.isMain) ?? displays.first
+        case .secondaryDisplay:
+            return displays.first { !$0.isMain } ?? displays.first
+        case .focusedApp:
+            return focusResolver.focusedDisplay(in: displays)
+                ?? displays.first(where: \.isMain)
+                ?? displays.first
+        }
+    }
+
+    private func selectLinkedDisplays(
         from displays: [ManagedDisplay],
         primary: ManagedDisplay
-    ) -> ManagedDisplay? {
-        let secondaryDisplays = displays.filter { $0.id != primary.id }
-
-        return secondaryDisplays.first {
-            $0.name.localizedCaseInsensitiveContains("Studio Display")
-        } ?? secondaryDisplays.first
+    ) -> [ManagedDisplay] {
+        displays.filter { $0.id != primary.id }
     }
 
     private func updateStatus(
         message: String,
-        primary: ManagedDisplay? = nil,
+        master: ManagedDisplay? = nil,
         settings: AppSettings
     ) {
         status = SyncStatus(
             message: settings.isPaused ? "Paused" : message,
-            primaryName: primary?.name,
-            secondaryName: nil,
+            primaryName: master?.name,
+            linkedNames: [],
             primaryBrightness: nil,
-            secondaryBrightness: nil,
-            targetBrightness: nil,
+            linkedTargetBrightness: nil,
+            primaryModeTitle: settings.masterSelectionMode.title,
             lastError: nil
         )
         notifyStatusChanged()

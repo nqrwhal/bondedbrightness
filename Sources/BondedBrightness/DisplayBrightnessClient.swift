@@ -1,11 +1,18 @@
 import CoreGraphics
 import Foundation
 
+struct DisplayIdentity: Equatable, Sendable {
+    let vendorID: UInt32
+    let productID: UInt32
+    let serialNumber: UInt32
+}
+
 @MainActor
 struct ManagedDisplay: Identifiable, Equatable {
     let id: CGDirectDisplayID
     let name: String
     let isMain: Bool
+    let identity: DisplayIdentity
 }
 
 @MainActor

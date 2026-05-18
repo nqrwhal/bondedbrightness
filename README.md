@@ -7,17 +7,19 @@ https://github.com/user-attachments/assets/0115908b-989f-4d01-abf3-8982f34fff86
 
 
 
-The main display is the source of truth. On each poll, the app reads the main
-display brightness and writes the secondary display to the same level, adjusted
-by the configured per-display offsets.
+The app can use the main display, another display, or the display that
+currently hosts the frontmost app's active window as the primary display. On
+each poll, it reads the primary display brightness and writes every linked
+display to the same level, adjusted by the configured per-display offsets.
 
 ## Behavior
 
 - Runs as a menu bar app.
-- Uses the macOS main display as the primary source.
-- Syncs the secondary Studio Display automatically.
+- Supports manual primary selection and a focused-app heuristic.
+- Syncs linked Studio Displays automatically.
 - Supports pause/resume from the menu bar.
-- Supports primary and secondary offsets in 5% steps.
+- Supports primary and linked offsets in 5% steps.
+- Lets you identify displays from the menu bar.
 - Persists pause, offset, and launch-at-login preferences with `UserDefaults`.
 - Registers itself as a login item by default.
 
@@ -42,6 +44,15 @@ To create a disk image (`.dmg`) for distribution:
 ```bash
 ./script/create_dmg.sh
 ```
+
+To build and upload a GitHub Release asset:
+
+```bash
+./script/release.sh v1.2.3
+```
+
+The repository also includes a GitHub Actions workflow that builds and uploads
+the DMG automatically when you push a tag that starts with `v`.
 
 ## License
 
